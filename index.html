@@ -158,7 +158,7 @@
 	        loadBg.destroy();
 	    });
 
-	    this.load.bitmapFont('desyrel', 'assets/fonts/desyrel.png', 'assets/fonts/desyrel.xml');
+	    this.load.bitmapFont('desyrel', 'Assets/fonts/desyrel.png', 'Assets/fonts/desyrel.xml');
 
 		this.load.image('skyBackground', 'Assets/SkyBg.png');
 		this.load.image('palmTree', 'Assets/PalmTree.png');
@@ -178,7 +178,7 @@
 		this.load.image('guideBtnSelectImg', 'Assets/GuideBtnSelect.png');
 		this.load.image('socialBtnSelectImg', 'Assets/SocialBtnSelect.png');
 
-		this.load.image('btmBg','Assets/BottomBg.png');
+		this.load.image('btmBg','Assets/bottomBg.png');
 		this.load.image('moreImg', 'Assets/More.png');
 		this.load.image('stretchImg', 'Assets/Stretch.png');
 
@@ -292,7 +292,7 @@
 	    gameOverAu = this.sound.add('Yowwy');
 	    levelPassedAu = this.sound.add('LevelPassed');
 	    stepAu = this.sound.add('WalkStep', {loop: true, volume: 5}).setRate(2);
-	    beepAu = this.sound.add('Beep', {volume: 0.3});
+	    beepAu = this.sound.add('Beep', {volume: 0.2});
 	    dropAu = this.sound.add('Drop');
 
 	    walkAuArr = [walkingAu,walking2Au];
@@ -894,7 +894,7 @@
 			callback: ()=>{
 				step++;
 				scoreText.setText("SCORE: "+step*10);
-				if(step == 100)
+				if(step == 10)
 				{
 					confettiSpriteL.setVisible(true);
 					confettiSpriteL.play({key: 'confettiFxKey'});
@@ -906,14 +906,14 @@
 
 					levelPassedAu.play();
 				}
-				if( step == 200)
+				if( step == 20)
 				{
 					confettiSpriteL.play({key: 'confettiFxKey'});
 					confettiSpriteR.play({key: 'confettiFxKey'});
 					loveImg.setVisible(true);
 					levelPassedAu.play();
 				}
-				if(step == 300)
+				if(step == 30)
 				{
 					confettiSpriteL.play({key: 'confettiFxKey'});
 					confettiSpriteR.play({key: 'confettiFxKey'});
