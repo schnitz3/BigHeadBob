@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="dist/phaser.js"></script>
+<script src="src/restartDrop.js"></script>
+<style type="text/css">
+		.center {
+	  display: block;
+	  margin-left: auto;
+	  margin-right: auto;
+	  /*width: 50%;*/
+	  /*z-index: 1;*/
+}
+</style>
+</head>
+<body>
+	<!-- <img src="Assets/LogoBg.png" alt="Paris" class="center"> -->
+	<div id="mygame"></div>
+	<script>
+	const CANVAS_WIDTH = 1402;
+	const CANVAS_HEIGHT = 772;
+	const INGAME_BTNSIZE = 68;
+	const DEAD_ANGLE = 40;
+	const CONTROL_MOVE = 0.5;
+
+	var config = {
+		type: Phaser.WEBGL,
+		parent: 'mygame',
+		width: CANVAS_WIDTH,
+		height: CANVAS_HEIGHT,		
+	    transparent: true,
+		backgroundColor: 0x000001,
+		scale: {
+			mode: Phaser.Scale.FIT,
+			autoCenter: Phaser.Scale.CENTER_BOTH
+		},
+	    physics: {
+	        default: 'matter',
+	        matter: {
+	            gravity: {
+	                x: 0,
+	                y: 0
+	            }
+	        }
+	    },
+		scene: {
+			preload: preload,
+			create: create,
+			update: update,
+	        pack: {
+	            files: [
+	                {
+	                    type: 'image',
+	                    key: 'loadBg',
+	                    url: 'Assets/LoadBg.png',
+	                }
+	            ]
+	        }
+		},
+	    audio: {
+	        disableWebAudio: true
+	    }
+	};
+
+	var game = new Phaser.Game(config);
+	var bobwalk;
+	var bobfall;
+
+	var treeAnimsTimeline = [];
+	var startDropTimeline;
+	var spawnTreeEvent;
+	var gravityEvent;
+	var gravityTimeline;
+
+	var leftArrowKey;
+	var rightArrowKey;
+
+	var dirs = [-1,1];
+	var dir;
+	var swipeLeft = false;
+	var swipeRight = false;
+
+	var step = 0;
+	var scoreText;
+	var scoreTimerEvent;
+
+	var parent;
+	var restartDrop;
+
+	var poofLeft;
+	var poofRight;
+
+	var guideBg;
+	var guideBtnArea;
+	var guideBtn;
+	var socialBtn;
+
+	var startBtn;
+	var bobIdle;
+   	var startBtnPosX;
+   	var startBtnPosY;
+	var leftPalmTreePosX;
+	var leftPalmTreePosY;
+	var rightPalmTreePosX;
+	var rightPalmTreePosY;
+    var bobPosX;
+    var bobPosY;
+    var readyFirstImg;
+    var confettiFx;
+    var confettiSpriteL;
+    var confettiSpriteR;
+    var dolphinFX;
+    var dolphinSprite;
+    var DolphinPosX;
+    var DolphinPosY;
+    var respectImg;
+    var loveImg;
+    var peaceImg;
+
+    var buttonClickAu;
+    var bgMusicAu;
+    var walkingAu;
+	var walking2Au;
+    var hitAu;
+    var gameOverAu;
+    var levelPassedAu;
+    var dropAu;
+    var stepAu; 
+
+    var isHitAuPlayed = false;
+    var walkAuArr;
+
+
+    var rainbowColor = [0xFF5757, 0xE8A241, 0x97FF7F, 0x52BFFF, 0x995DE8];
+	var rainbowColorIdx = 0;
+	var rainbowColorOffset = 0;
+	var delay = 0;
+	var rainbowWave = 0;
+
+
+	function preload ()
+	{
+		parent = this;
+
+		var loadBg = this.add.image(0,0, 'loadBg').setOrigin(0);
+	    var progress = this.add.graphics();
+
+	    this.load.on('progress', function (value) {
+
+        progress.clear();
+        progress.fillStyle(0xffffff, 1);
+        progress.fillRoundedRect(560, 370, 278 * value , 34);
+
+	    });
+
+	    this.load.on('complete', function () {
+	        progress.destroy();
+	        loadBg.destroy();
+	    });
+
+	    this.load.bitmapFont('desyrel', 'assets/fonts/desyrel.png', 'assets/fonts/desyrel.xml');
+
+		this.load.image('skyBackground', 'Assets/SkyBg.png');
+		this.load.image('palmTree', 'Assets/PalmTree.png');
+		this.load.image('road', 'Assets/Road.png');
+
+		//load guide screen
+		this.load.image('guideBgImg', 'Assets/GuideBg.png');
+		this.load.image('shareBgImg', 'Assets/ShareBg.png');
+		this.load.image('facebookImg', 'Assets/Facebook.png');
+		this.load.image('twitterImg', 'Assets/Twitter.png');
+		this.load.image('redditImg', 'Assets/Reddit.png');
+		this.load.image('vkImg', 'Assets/Vk.png');
+
+		this.load.image('guideBtnAreaImg', 'Assets/GuideBtnAreaBg.png');
+		this.load.image('guideBtnImg', 'Assets/GuideBtn.png');
+		this.load.image('socialBtnImg', 'Assets/SocialBtn.png');		
+		this.load.image('guideBtnSelectImg', 'Assets/GuideBtnSelect.png');
+		this.load.image('socialBtnSelectImg', 'Assets/SocialBtnSelect.png');
+
+		this.load.image('btmBg','Assets/BottomBg.png');
+		this.load.image('moreImg', 'Assets/More.png');
+		this.load.image('stretchImg', 'Assets/Stretch.png');
+
+		this.load.image('prepareBg','Assets/BackgroundPrepare.png');
+		this.load.image('playImg','Assets/Play.png');
+		this.load.image('playPressedImg','Assets/PlayPress.png');
+
+		//load bob animations
+		this.load.image('idle','Assets/anims/idle/bigheadbobidle.png');
+		this.load.image('idle1','Assets/anims/idle/bigheadbobidle_1.png');
+		this.load.image('idle2','Assets/anims/idle/bigheadbobidle_2.png');
+		this.load.image('idle3','Assets/anims/idle/bigheadbobidle_3.png');
+		this.load.image('idle4','Assets/anims/idle/bigheadbobidle_4.png');
+		this.load.image('idle5','Assets/anims/idle/bigheadbobidle_5.png');
+		this.load.image('idle6','Assets/anims/idle/bigheadbobidle_6.png');
+		this.load.image('idle7','Assets/anims/idle/bigheadbobidle_7.png');
+
+		this.load.image('walk','Assets/anims/walk/bigheadbobwalk.png');
+		this.load.image('walk1','Assets/anims/walk/bigheadbobwalk_1.png');
+		this.load.image('walk2','Assets/anims/walk/bigheadbobwalk_2.png');
+		this.load.image('walk3','Assets/anims/walk/bigheadbobwalk_3.png');
+		this.load.image('walk4','Assets/anims/walk/bigheadbobwalk_4.png');
+		this.load.image('walk5','Assets/anims/walk/bigheadbobwalk_5.png');
+		this.load.image('walk6','Assets/anims/walk/bigheadbobwalk_6.png');
+		this.load.image('walk7','Assets/anims/walk/bigheadbobwalk_7.png');
+
+		this.load.image('BobFall','Assets/bigheadbobfall.png');
+
+		this.load.image('poof','Assets/anims/poof/Poof.png');
+		this.load.image('poof1','Assets/anims/poof/Poof1.png');
+		this.load.image('poof2','Assets/anims/poof/Poof2.png');
+		this.load.image('poof3','Assets/anims/poof/Poof3.png');
+		this.load.image('poof4','Assets/anims/poof/Poof4.png');
+		this.load.image('poof5','Assets/anims/poof/Poof5.png');
+		this.load.image('poof6','Assets/anims/poof/Poof6.png');
+		this.load.image('poof7','Assets/anims/poof/Poof7.png');
+		this.load.image('poof8','Assets/anims/poof/Poof8.png');
+		this.load.image('poof9','Assets/anims/poof/Poof9.png');
+		this.load.image('poof10','Assets/anims/poof/Poof10.png');
+		this.load.image('poof11','Assets/anims/poof/Poof11.png');
+		this.load.image('poof12','Assets/anims/poof/Poof12.png');
+		this.load.image('poof13','Assets/anims/poof/Poof13.png');
+		this.load.image('poof14','Assets/anims/poof/Poof14.png');
+		this.load.image('poof15','Assets/anims/poof/Poof15.png');
+		this.load.image('poof16','Assets/anims/poof/Poof16.png');
+		this.load.image('poof17','Assets/anims/poof/Poof17.png');
+		this.load.image('poof18','Assets/anims/poof/Poof18.png');
+		this.load.image('poof19','Assets/anims/poof/Poof19.png');
+		this.load.image('poof20','Assets/anims/poof/Poof20.png');
+		this.load.image('poof21','Assets/anims/poof/Poof21.png');
+		this.load.image('poof22','Assets/anims/poof/Poof22.png');
+
+		//load Start Board btn
+		this.load.image('startImg','Assets/Start.png');
+		this.load.image('startDropImg','Assets/StartDrop.png');
+		this.load.image('restartDropImg','Assets/RestartDrop.png');
+
+		//load ready,set,go
+		this.load.image('ReadyBtn','Assets/ReadyBtn.png');
+		this.load.image('SetBtn','Assets/SetBtn.png');
+		this.load.image('GoBtn','Assets/GoBtn.png');
+
+		//load confetti
+		this.load.spritesheet('confetti','Assets/anims/confetti/Confetti.png',{frameWidth: 512, frameHeight: 512});		
+		this.load.spritesheet('DolphinJump','Assets/anims/dolphinAnim/DolphinSprite.png',{frameWidth: 256, frameHeight: 256});
+
+
+		//load respect,love,piece
+		this.load.image('Respect','Assets/Respect.png');
+		this.load.image('Love','Assets/Love.png');
+		this.load.image('Peace','Assets/Peace.png');
+
+		//load audio
+		this.load.audio('ButtonClick','Assets/Audio/ButtonClick.mp3');
+		this.load.audio('CubicZ','Assets/Audio/CubicZ.mp3');
+		this.load.audio('Laugh','Assets/Audio/Laugh.mp3');
+		this.load.audio('Punch','Assets/Audio/Punch.mp3');
+		this.load.audio('Weee','Assets/Audio/Weee.mp3');
+		this.load.audio('Yowwy','Assets/Audio/Yowwy.mp3');
+		this.load.audio('LevelPassed','Assets/Audio/LevelPassed.mp3');
+		this.load.audio('Beep','Assets/Audio/Beep.mp3');
+		this.load.audio('WalkStep','Assets/Audio/WalkStep.mp3');
+		this.load.audio('Falling','Assets/Audio/Falling.mp3');
+		this.load.audio('Drop','Assets/Audio/Drop.mp3');
+
+
+
+
+
+
+	}
+
+	function create ()
+	{
+		//======
+		const PLAYBTN_WIDTH = 405;
+		const PLAYBTN_HEIGHT = 120;
+
+		const ROAD_HEIGHT = 305;
+
+		const BOB_SIZE = 431;
+
+		step = 0;
+
+		//add sounds
+	    buttonClickAu = this.sound.add('ButtonClick');
+	    bgMusicAu = this.sound.add('CubicZ',{loop: true, volume: 0.3});
+	    walkingAu = this.sound.add('Laugh');
+		walking2Au = this.sound.add('Weee');
+	    hitAu = this.sound.add('Falling');
+	    gameOverAu = this.sound.add('Yowwy');
+	    levelPassedAu = this.sound.add('LevelPassed');
+	    stepAu = this.sound.add('WalkStep', {loop: true, volume: 5}).setRate(2);
+	    beepAu = this.sound.add('Beep', {volume: 0.3});
+	    dropAu = this.sound.add('Drop');
+
+	    walkAuArr = [walkingAu,walking2Au];
+
+
+		//keys binding
+		leftArrowKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+		rightArrowKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+
+		//add sky bg
+		var skyBg = this.add.image(0,0,'skyBackground').setOrigin(0).setInteractive();
+
+
+		skyBg.on('pointerup', function (pointer) {
+
+			this.time.addEvent({
+				delay: 100,
+				callback: ()=>{
+					swipeLeft = false;
+					swipeRight = false;
+				},
+			});
+		}, this );
+
+		this.input.setDraggable(skyBg);
+	    this.input.on('drag', function (pointer, gameObject, dragX, dragY) {
+
+	    	if(dragX > 0)
+	    	{
+	    		//swipeRight
+	    		swipeRight = true;
+	    		swipeLeft = false;
+	    	}
+	    	else if (dragX < 0)
+	    	{
+	    		swipeLeft = true;
+	    		swipeRight = false;
+	    	}
+	    });
+
+
+		//add tree
+		leftPalmTreePosX = 200;
+		leftPalmTreePosY = CANVAS_HEIGHT - INGAME_BTNSIZE - 30;
+
+		leftPalmTree = this.add.image(leftPalmTreePosX,leftPalmTreePosY,'palmTree').setOrigin(0.5,1);
+
+		rightPalmTreePosX = CANVAS_WIDTH - 200;
+		rightPalmTreePosY = CANVAS_HEIGHT - INGAME_BTNSIZE - 30;
+
+		rightPalmTree = this.add.image(rightPalmTreePosX,rightPalmTreePosY,'palmTree').setOrigin(0.5,1);
+		rightPalmTree.flipX = true;
+
+		//add road
+		this.add.image(0,CANVAS_HEIGHT - ROAD_HEIGHT,'road').setOrigin(0);
+
+		//add guide backgrounds
+		guideBg = this.add.image(0 - CANVAS_WIDTH,0,'guideBgImg').setOrigin(0).setDepth(3);
+		var shareContainer = this.add.container(0 - CANVAS_WIDTH,0).setDepth(3);
+		shareBg = this.add.image(0 - CANVAS_WIDTH,0,'shareBgImg').setOrigin(0).setDepth(3).setVisible(true);
+		facebookBtn = this.add.image(244 - CANVAS_WIDTH,345,'facebookImg').setOrigin(0).setDepth(3).setInteractive().setVisible(true);
+		twitterBtn = this.add.image(474 - CANVAS_WIDTH,345,'twitterImg').setOrigin(0).setDepth(3).setInteractive().setVisible(true);
+		redditBtn = this.add.image(705- CANVAS_WIDTH,345,'redditImg').setOrigin(0).setDepth(3).setInteractive().setVisible(true);
+		vkBtn = this.add.image(939- CANVAS_WIDTH,345,'vkImg').setOrigin(0).setDepth(3).setInteractive().setVisible(true);
+
+
+		facebookBtn.on('pointerup', openFBExternalLink, this);
+		twitterBtn.on('pointerup', openTwitterExternalLink, this);
+		redditBtn.on('pointerup', openRedditExternalLink, this);
+		vkBtn.on('pointerup', openVkExternalLink, this);
+
+
+		shareContainer.add([shareBg,facebookBtn,twitterBtn,redditBtn,vkBtn]);
+		shareContainer.setVisible(false);
+
+		guideBtnArea = this.add.image(0 - CANVAS_WIDTH,0,'guideBtnAreaImg').setOrigin(0).setDepth(3);
+		guideBtn = this.add.image(0 - CANVAS_WIDTH,196,'guideBtnImg').setOrigin(0).setDepth(3).setInteractive();
+		guideBtn.setTexture('guideBtnSelectImg');
+		socialBtn = this.add.image(0 - CANVAS_WIDTH,196+99,'socialBtnImg').setOrigin(0).setDepth(3).setInteractive();
+
+
+
+		socialBtn.on('pointerup', function () {
+			socialBtn.setTexture('socialBtnSelectImg');
+			guideBtn.setTexture('guideBtnImg');
+			buttonClickAu.play();
+			guideBg.setVisible(false);
+			// shareBg.setVisible(true);
+			shareContainer.setVisible(true);
+
+		}, this );
+
+
+
+		guideBtn.on('pointerup', function () {
+			guideBtn.setTexture('guideBtnSelectImg');
+			socialBtn.setTexture('socialBtnImg');
+			buttonClickAu.play();
+			guideBg.setVisible(true);
+			shareContainer.setVisible(false);
+		}, this );
+
+
+		//add bottom bg
+		this.add.image(0,CANVAS_HEIGHT - INGAME_BTNSIZE,'btmBg').setOrigin(0).setDepth(4);
+
+		var moreBtn = this.add.image(0,CANVAS_HEIGHT - INGAME_BTNSIZE, 'moreImg').setOrigin(0).setInteractive().setDepth(4);
+
+		var stretchBtn = this.add.image(CANVAS_WIDTH - INGAME_BTNSIZE,CANVAS_HEIGHT - INGAME_BTNSIZE, 'stretchImg').setOrigin(0).setInteractive().setDepth(4);
+
+		stretchBtn.on('pointerdown', function () {
+
+			stretchBtn.setTint(0xaff7ff);
+		}, this );
+
+		stretchBtn.on('pointerup', function () {
+
+			stretchBtn.setTint(0xffffff);
+
+			buttonClickAu.play();
+
+			if (this.scale.isFullscreen)
+			{
+				this.scale.stopFullscreen();
+			}
+			else
+			{
+	    	    this.scale.startFullscreen();
+			}
+		}, this );
+
+
+		moreBtn.on('pointerdown', function () {
+
+			moreBtn.setTint(0xd9d9d9);
+		}, this );
+
+		moreBtn.on('pointerup', function () {
+
+			moreBtn.setTint(0xffffff);
+
+			buttonClickAu.play();
+
+			//show guideline screen and share screen here
+			// guideBg.setVisible(true);
+			//todo
+			var delta;
+			var containerDelta;
+			if(guideBg.x == 0)
+			{
+				deta = -1 * CANVAS_WIDTH;
+				containerDelta = 0;
+			}
+			else
+			{
+				deta = 0;
+				containerDelta = CANVAS_WIDTH;
+			}
+			this.tweens.add({
+				targets: [guideBg,guideBtnArea,guideBtn,socialBtn],
+				props:{
+					x : {value: function() {return deta;},ease : 'Linear' }
+				},
+				duration: 200
+			});
+
+			this.tweens.add({
+				targets: shareContainer,
+				props:{
+					x : {value: function() {return containerDelta;},ease : 'Linear' }
+				},
+				duration: 200
+			});
+
+			
+		}, this );
+
+		//add score
+		// scoreText = this.add.text(0,0, 'Score: 0', { fontFamily: 'Arial', fontSize: 40, color: '#127afa'});
+		scoreText = this.add.dynamicBitmapText(10, 20, 'desyrel', 'SCORE: 0', 50);
+		scoreText.setDisplayCallback(rainbowCallback);
+
+
+		//Idle anim
+	    this.anims.create({
+	        key: 'bobIdle',
+	        frames: [
+	            { key: 'idle' },
+	            { key: 'idle1' },
+	            { key: 'idle2', duration: 1000 },
+	            { key: 'idle3' },
+	            { key: 'idle4' },
+	            { key: 'idle5' },
+	            { key: 'idle6' },
+	            { key: 'idle7', duration: 1000 }
+	        ],
+	        frameRate: 2,
+	        repeat: -1
+	    });
+
+
+
+	    this.anims.create({
+	        key: 'poof',
+	        frames: [
+	            { key: 'poof' },
+	            { key: 'poof1' },
+	            { key: 'poof2' },
+	            { key: 'poof3' },
+	            { key: 'poof4' },
+	            { key: 'poof5' },
+	            { key: 'poof6' },
+	            { key: 'poof7' },
+	            { key: 'poof8' },
+	            { key: 'poof9' },
+	            { key: 'poof10' },
+	            { key: 'poof11' },
+	            { key: 'poof12' },
+	            { key: 'poof13' },
+	            { key: 'poof14' },
+	            { key: 'poof15' },
+	            { key: 'poof16' },
+	            { key: 'poof17' },
+	            { key: 'poof18' },
+	            { key: 'poof19' },
+	            { key: 'poof20' },
+	            { key: 'poof21' },
+	            { key: 'poof22' }
+	        ],
+	        frameRate: 32,
+	        repeat: 0
+	    });
+
+        confettiFx = this.anims.create({
+	        key: 'confettiFxKey',
+	        frames: this.anims.generateFrameNumbers('confetti'),
+	        frameRate: 16
+	    });
+
+        dolphinFX = this.anims.create({
+	        key: 'dolphinFXKey',
+	        frames: this.anims.generateFrameNumbers('DolphinJump'),
+	        frameRate: 16
+	    });
+
+
+        confettiSpriteL = this.add.sprite(CANVAS_WIDTH/2 - 600,CANVAS_HEIGHT/2 - 120,'confetti').setVisible(false);
+        confettiSpriteR = this.add.sprite(CANVAS_WIDTH/2 + 600,CANVAS_HEIGHT/2 - 120,'confetti').setVisible(false);
+
+        DolphinPosX = CANVAS_WIDTH/2;
+        DolphinPosY = CANVAS_HEIGHT/2 - 100;
+        dolphinSprite = this.add.sprite(CANVAS_WIDTH/2,CANVAS_HEIGHT/2 - 100,'DolphinJump').setScale(0.5).setVisible(false);
+
+
+	    // var bobPosX = CANVAS_WIDTH/2 - BOB_SIZE/2;
+	    // var bobPosY = CANVAS_HEIGHT - BOB_SIZE - INGAME_BTNSIZE - 50;
+
+	    bobPosX = CANVAS_WIDTH/2;
+	    bobPosY = CANVAS_HEIGHT - INGAME_BTNSIZE - 20;
+
+	    bobIdle = this.add.sprite(bobPosX, bobPosY, 'idle').setOrigin(0.5,1).play('bobIdle');
+
+	   	//Add start btn
+	   	startBtnPosX = bobPosX - 200;
+	   	startBtnPosY = bobPosY - 175;
+	   	startBtn = this.add.image(startBtnPosX,startBtnPosY,'startImg').setOrigin(0);
+
+		// startBtn.on('pointerdown', function () {
+		// 	//change button image
+		// 	startBtn.setTint(0xd9d9d9);
+
+		// }, this );
+
+		// startBtn.on('pointerup', function () {
+		// 	//play pop walking anim
+		// 	startBtn.setTint(0xffffff);
+
+		// }, this );
+
+
+
+		var prepareBackground = this.add.image(0,0,'prepareBg').setOrigin(0).setDepth(5);
+
+		var playBtn = this.add.image(CANVAS_WIDTH/2 - PLAYBTN_WIDTH/2, CANVAS_HEIGHT/2 - PLAYBTN_HEIGHT/2 + 70, 'playImg').setOrigin(0).setDepth(6).setInteractive();
+		playBtn.on('pointerdown', function () {
+			//change button image
+			playBtn.setTexture('playPressedImg');
+
+		}, this );
+
+		playBtn.on('pointerup', function () {
+			//remove prepare bg and playgame btn
+			playBtn.setTexture('playImg');
+
+			buttonClickAu.play();
+
+			playBtn.destroy();
+			prepareBackground.destroy();
+			// startBtn.setInteractive();		
+
+			// doCountAnim(readyImg);
+			readyFirstImg = this.add.image(CANVAS_WIDTH/2,CANVAS_HEIGHT/2 - 200,'ReadyBtn').setScale(0.5);
+
+			//add respect,love,peace imgs
+			respectImg = this.add.image(CANVAS_WIDTH/2 - 250,CANVAS_HEIGHT/2 - 100,'Respect').setScale(0.5).setVisible(false);
+			loveImg = this.add.image(CANVAS_WIDTH/2,CANVAS_HEIGHT/2 - 200,'Love').setScale(0.5).setVisible(false);
+			peaceImg = this.add.image(CANVAS_WIDTH/2 + 250,CANVAS_HEIGHT/2 - 100,'Peace').setScale(0.5).setVisible(false);
+
+
+			this.time.addEvent({ delay: 1000, callback: doCountAnim, callbackScope: this, repeat: 0 });
+
+			this.time.delayedCall(3000, startGame, [], this);
+
+			bgMusicAu.play();
+
+		}, this );
+
+	}
+
+	function rainbowCallback(data)
+	{
+	    data.color = rainbowColor[(rainbowColorOffset + rainbowColorIdx) % rainbowColor.length];
+	    rainbowColorIdx = (rainbowColorIdx + 1) % (rainbowColor.length);
+	    data.y = Math.cos(rainbowWave + rainbowColorIdx) * 10;
+	    rainbowWave += 0.01;
+
+	    return data;
+	}
+
+	function textCallback (data)
+	{
+	    if (data.index >= 5 && data.index <= 8)
+	    {
+	        data.x = Phaser.Math.Between(data.x - 2, data.x + 2);
+	        data.y = Phaser.Math.Between(data.y - 4, data.y + 4);
+	    }
+
+	    return data;
+	}
+
+	function doCountAnim()
+	{
+		if(readyFirstImg)
+		{
+			readyFirstImg.destroy();
+		}
+
+		
+		
+		var goImg = this.add.image(CANVAS_WIDTH/2,CANVAS_HEIGHT/2 - 200,'GoBtn').setScale(0.5).setVisible(false);
+		var setImg = this.add.image(CANVAS_WIDTH/2,CANVAS_HEIGHT/2 - 200,'SetBtn').setScale(0.5).setVisible(false);
+		var readyImg = this.add.image(CANVAS_WIDTH/2,CANVAS_HEIGHT/2 - 200,'ReadyBtn').setScale(0.5);
+
+		parent.tweens.timeline({
+			tweens: [{
+				targets: readyImg,
+				scale : 0,
+				rotation:10,
+				duration: 1000,
+				onStart: function(){
+					beepAu.play();
+				},
+				onComplete: function () { 
+					readyImg.destroy(); 
+					setImg.setVisible(true);
+				}
+			},
+			{
+				targets: setImg,
+				scale : 0,
+				rotation:10,
+				duration: 1000,
+				onStart: function(){
+					beepAu.play();
+				},
+				onComplete: function () { 
+					setImg.destroy();
+					goImg.setVisible(true);
+				}
+			},
+			{
+				targets: goImg,
+				scale : 0,
+				rotation:10,
+				duration: 1000,
+				onStart: function(){
+					beepAu.play();
+				},
+				onComplete: function () { 
+					goImg.destroy(); 
+				}
+			}]
+		});
+	}
+
+	function getRandomInt(min, max) {
+	    min = Math.ceil(min);
+	    max = Math.floor(max);
+	    return Math.floor(Math.random() * (max - min + 1)) + min;
+	}
+
+	function startGame()
+	{
+
+		resetHitAuPlayed();
+
+		stepAu.play();
+
+		//todo
+		startBtn.destroy();
+		bobIdle.destroy();
+		var startDrop = parent.add.image(startBtnPosX,startBtnPosY,'startDropImg').setOrigin(0);
+		// startDrop.setScale(0.5);
+
+		startDropTimeline = parent.tweens.timeline({
+			tweens: [{
+				targets : startDrop,
+				scale : 0.5,
+				y : startBtnPosY + 100,
+				ease : 'Linear',
+				duration : 500,
+				onComplete: function(){
+					dropAu.play();
+				},
+			},
+			{
+				targets : startDrop,
+				scale : 0,
+				x : startBtnPosX + 180,
+				y : startBtnPosY - 40,
+				ease : 'Linear',
+				duration: 10000
+			}]
+		});
+
+		//tree timeline
+		var treeTimeLine = parent.tweens.timeline({
+			loop : 0,
+			tweens: [{
+				targets : [leftPalmTree,rightPalmTree],
+				scale : 0,
+				x : CANVAS_WIDTH/2,
+				y : leftPalmTreePosY - 220,
+				ease : 'Linear',
+				duration: 10000
+			}]
+		});
+		
+		treeAnimsTimeline.push(treeTimeLine);
+
+
+
+		spawnTreeEvent = parent.time.addEvent({
+			delay: 3000,
+			callback: ()=>{
+				newPalmTree = parent.add.image(leftPalmTreePosX-700,leftPalmTreePosY+300,'palmTree').setOrigin(0.5,1).setScale(2);
+				newPalmTree.setDepth(0);
+				newRPalmTree = parent.add.image(rightPalmTreePosX+700,rightPalmTreePosY+300,'palmTree').setOrigin(0.5,1).setScale(2);
+				newRPalmTree.setDepth(0);
+				var newTreeTimeline = parent.tweens.timeline({
+					loop : 0,
+					tweens: [{
+						targets : [newPalmTree,newRPalmTree],
+						scale : 0,
+						x : CANVAS_WIDTH/2,
+						y : leftPalmTreePosY - 220,
+						ease : 'Linear',
+						duration: 15000,
+						// onComplete: function () { 
+						// 	newPalmTree.destroy(); 
+						// },
+					}]
+				});
+
+				treeAnimsTimeline.push(newTreeTimeline);
+
+			},
+			loop: true
+		});
+
+		var force = 10;
+
+		gravityEvent = parent.time.addEvent({
+			delay: 200,
+			callback: ()=>{
+				if(bobwalk.angle == 0)
+				{
+					dir = dirs[getRandomInt(0,1)];
+				}
+
+				if(Math.abs(bobwalk.angle) < 10)
+				{
+					force = 10;
+				}
+				if(Math.abs(bobwalk.angle) >= 10 && Math.abs(bobwalk.angle) < 20)
+				{
+					force = 20;
+				}
+			    if(Math.abs(bobwalk.angle) >= 20 && Math.abs(bobwalk.angle) < 30)
+				{
+					force = 30;
+				}
+				if(Math.abs(bobwalk.angle) >= 30 && Math.abs(bobwalk.angle) < 40)
+				{
+					if(bobwalk.angle * dir > 0)
+					{
+						force = 40;
+					}
+					else
+					{
+						force = 60 - 40;
+					}
+					
+				}
+		    	if(Math.abs(bobwalk.angle) >= 40 && Math.abs(bobwalk.angle) < 50)
+				{
+					if(bobwalk.angle * dir > 0)
+					{
+						force = 45;
+					}
+					else
+					{
+						force = 60 - 45;
+					}
+				}
+		    	if(Math.abs(bobwalk.angle) >= 50 && Math.abs(bobwalk.angle) < 60)
+				{
+					if(bobwalk.angle * dir > 0)
+					{
+						force = 50;
+					}
+					else
+					{
+						force = 60 - 50;
+					}
+				}
+
+				if(getRandomInt(0,1) > 0)
+				{
+					if(bobwalk.angle < 0)
+					{
+						dir = dirs[0];
+						force = getRandomInt (10,60);
+					}
+
+					if(bobwalk.angle > 0)
+					{
+						dir = dirs[1];
+						force = getRandomInt (10,60);
+					}
+				}
+
+				gravityTimeline = parent.tweens.timeline({
+					loop: 0,
+					tweens: [{
+						targets : bobwalk,
+						props:{
+							angle : {value: function() {return bobwalk.angle + dir * force;},ease : 'Linear' }
+						},
+						duration : 500
+					}]
+				});
+			},
+			loop: true
+		});
+	    //walk anim
+	    parent.anims.create({
+	        key: 'bobwalk',
+	        frames: [
+	            { key: 'walk' },
+	            { key: 'walk1' },
+	            { key: 'walk2' },
+	            { key: 'walk3' },
+	            { key: 'walk4' },
+	            { key: 'walk5' },
+	            { key: 'walk6' },
+	            { key: 'walk7' }
+	        ],
+	        frameRate: 8,
+	        repeat: -1
+	    });
+	    bobfall = this.add.image(bobPosX,bobPosY,'BobFall').setOrigin(0.5,1).setDepth(2).setVisible(false);
+
+		bobwalk = parent.add.sprite(bobPosX, bobPosY, 'walk').setOrigin(0.5,1).setDepth(2).play('bobwalk');
+
+		poofLeft = parent.add.sprite(bobPosX - 200, bobPosY, 'poof').setOrigin(0.5,0.5);
+		poofLeft.setVisible(false);
+
+		poofRight = parent.add.sprite(bobPosX + 200, bobPosY, 'poof').setOrigin(0.5,0.5);
+		poofRight.setVisible(false);
+
+
+		restartDrop = new RestartDrop(parent,CANVAS_WIDTH/2,-300,'restartDropImg','Score: '+step +' feet'+'\n' + 'click to restart',null, restartGame);
+
+		
+
+		scoreTimerEvent = parent.time.addEvent({
+			delay: 1000,
+			callback: ()=>{
+				step++;
+				scoreText.setText("SCORE: "+step*10);
+				if(step == 100)
+				{
+					confettiSpriteL.setVisible(true);
+					confettiSpriteL.play({key: 'confettiFxKey'});
+
+					confettiSpriteR.setVisible(true);
+					confettiSpriteR.play({key: 'confettiFxKey'});
+
+					respectImg.setVisible(true);
+
+					levelPassedAu.play();
+				}
+				if( step == 200)
+				{
+					confettiSpriteL.play({key: 'confettiFxKey'});
+					confettiSpriteR.play({key: 'confettiFxKey'});
+					loveImg.setVisible(true);
+					levelPassedAu.play();
+				}
+				if(step == 300)
+				{
+					confettiSpriteL.play({key: 'confettiFxKey'});
+					confettiSpriteR.play({key: 'confettiFxKey'});
+					peaceImg.setVisible(true);
+					levelPassedAu.play();
+				}
+
+				if(step % 5 == 0)
+				{
+					dolphinSprite.x = DolphinPosX + Phaser.Math.Between(-400, 200);
+					dolphinSprite.y = DolphinPosY + Phaser.Math.Between(0, 100);
+					dolphinSprite.setVisible(true);
+					dolphinSprite.play({key: 'dolphinFXKey'});
+				}
+
+				var randomArray = [0,1,2,3,4,5];
+				var rdm = getRandomInt (0,5);
+				if(rdm < 1)
+				{
+					Phaser.Math.RND.pick(walkAuArr).play();
+				}
+			},
+			loop: true
+		});
+	}
+
+	var forceTime = 0.5;
+	var delay = 0;
+
+	function resetHitAuPlayed()
+	{
+		isHitAuPlayed = false;
+	}
+
+	function playHitAuOneTime()
+	{
+		if(isHitAuPlayed == false)
+		{
+			isHitAuPlayed = true;
+			hitAu.play();
+			gameOverAu.play();
+			bgMusicAu.stop();
+			stepAu.stop();
+		}
+	}
+
+	function update()
+	{
+
+		if(bobwalk)
+		{
+			if(bobwalk.angle > DEAD_ANGLE || bobwalk.angle < -1 * DEAD_ANGLE)
+			{	
+				if(restartDrop.y < 0)
+				{
+					if(bobwalk.angle < 0)
+					{
+						//play poof
+						poofLeft.setVisible(true);
+						poofLeft.play('poof');
+					}
+					else
+					{
+						poofRight.setVisible(true);
+						poofRight.play('poof');
+					}
+
+					restartDrop.setNewText('Record: '+step +' feet'+'\n' + 'click to restart');
+					restartDrop.doFallAnim();
+				}
+
+
+				bobfall.rotation = bobwalk.rotation;
+				bobfall.setVisible(true);
+				bobwalk.destroy();
+
+				playHitAuOneTime();
+
+
+				treeAnimsTimeline.forEach(function (element,i) {
+					element.stop();
+				});
+
+				treeAnimsTimeline = [];
+
+				if(startDropTimeline)
+				{
+					startDropTimeline.destroy();
+				}
+
+				if(spawnTreeEvent)
+				{
+					spawnTreeEvent.destroy();
+				}
+
+				gravityTimeline.stop();
+				gravityEvent.destroy();
+				scoreTimerEvent.destroy();
+
+			
+			}
+
+			if(leftArrowKey.isDown || swipeLeft)
+			{
+				dir = dirs[0];
+			}
+
+			if(rightArrowKey.isDown || swipeRight)
+			{
+				dir = dirs[1];
+			}
+
+		}
+
+	    rainbowColorIdx = 0;
+
+	    if (delay++ === 6)
+	    {
+	        rainbowColorOffset = (rainbowColorOffset + 1) % (rainbowColor.length);
+	        delay = 0;
+	    }
+
+	}
+
+	function restartGame()
+	{
+		buttonClickAu.play();
+		parent.registry.destroy();
+		parent.events.off();
+		parent.scene.restart();
+	}
+
+	function openFBExternalLink()
+	{
+	    //var tweet = 'I am testing a button from within a Phaser example';
+
+	    var url = 'https://facebook.com';
+
+
+	    var s = window.open(url, '_blank');
+
+	    if (s && s.focus)
+	    {
+	        s.focus();
+	    }
+	    else if (!s)
+	    {
+	        window.location.href = url;
+	    }
+	}
+
+	function openTwitterExternalLink()
+	{
+	    var tweet = 'I am testing a button from within a Phaser example';
+
+	    var url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweet);
+
+
+	    var s = window.open(url, '_blank');
+
+	    if (s && s.focus)
+	    {
+	        s.focus();
+	    }
+	    else if (!s)
+	    {
+	        window.location.href = url;
+	    }
+	}
+
+	function openRedditExternalLink()
+	{
+
+	    var url = 'https://www.reddit.com';
+
+
+	    var s = window.open(url, '_blank');
+
+	    if (s && s.focus)
+	    {
+	        s.focus();
+	    }
+	    else if (!s)
+	    {
+	        window.location.href = url;
+	    }
+	}
+
+	function openVkExternalLink()
+	{
+
+	    var url = 'https://www.vk.com';
+
+
+	    var s = window.open(url, '_blank');
+
+	    if (s && s.focus)
+	    {
+	        s.focus();
+	    }
+	    else if (!s)
+	    {
+	        window.location.href = url;
+	    }
+	}
+
+	</script>
+	<!-- <img src="Assets/GuideBg.png" alt="bynight" class="center"> -->
+</body>
+</html>
